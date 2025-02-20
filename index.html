@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8">
+  <title>纯文字德州扑克</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- 使用 defer 保证加载顺序 -->
+<script src="data.js"></script>
+<script src="ai.js"></script>       <!-- 先加载 AI 模块 -->
+<script src="core.js"></script>     <!-- 核心模块依赖 AI -->
+<script src="ui.js"></script>
+</head>
+<link rel="preload" href="data.js" as="script">
+<link rel="preload" href="core.js" as="script">
+<body>
+  <div id="gameContainer" class="ascii-interface"></div>
+
+  <!-- 增加加载完成检测 -->
+  <script>
+// 修改 index.html 中的初始化代码
+// index.html 改造后的启动代码
+window.addEventListener('load', () => {
+  // 第1阶段: 快速首屏渲染
+  const initStage1 = () => {
+    const container = document.getElementById('gameContainer');
+    container.innerHTML = '<div class="loading">基础初始化中...</div>';
+    return new Promise(resolve => setTimeout(resolve, 0));
+  };
+
+  // 第2阶段: 并行加载关键资源
+  const initStage2 = async () => {
+    const game = new GameCore();
+    const ui = new GameUI(game);
+    return { game, ui };
+  };
+
+  // 第3阶段: 分步核心初始化
+  const initStage3 = async ({ game, ui }) => {
+    // 异步负载进度通知
+    const updateProgress = (step) => {
+      ui.showLoadingIndicator(`初始化进度: ${step}`);
+    };
+
+    updateProgress('开始加载存档');
+    await new Promise(r => setTimeout(r, 0));
+    game.playerData = loadPlayerData();
+
+    updateProgress('构建牌局核心');
+    await game.asyncInitGame(3, (progress) => {
+      updateProgress(`洗牌中 ${Math.round(progress * 100)}%`);
+    });
+
+    updateProgress('启动AI模块');
+    await aiSystem.lazyInit();
+
+    updateProgress('完成准备');
+    return { game, ui };
+  };
+
+  // 执行初始化流程
+  initStage1()
+    .then(initStage2)
+    .then(initStage3)
+    .then(({ game, ui }) => {
+      ui.hideLoadingIndicator();
+      ui.renderMainMenu();
+    })
+    .catch((err) => {
+      alert(`初始化失败: ${err.message}`);
+    });
+
+});
+  </script>
+</body>
+</html>

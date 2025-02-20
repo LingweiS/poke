@@ -1,0 +1,114 @@
+/* style.css */
+/* 强制 GPU 加速 */
+.player-area, .loading-screen {
+  transform: translateZ(0);
+  will-change: transform, opacity;
+}
+
+/* 避免重绘风暴 */
+.player {
+  transition: opacity 0.3s ease; /* 取代频繁改动 top/left */
+}
+/* style.css 中添加 */
+.loading-screen {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.loading-text {
+  color: #00ff00;
+  margin: 10px 0;
+}
+
+.loading-spinner {
+  color: #ffff00;
+  font-family: 'Monaco', monospace;
+}
+.ascii-style {
+  font-family: 'Monaco', monospace;
+  background: #112233;
+  color: #c0c0c0;
+  padding: 20px;
+}
+
+.player.human {
+  color: #00ff00;
+}
+
+.player.ai {
+  color: #ff4444;
+}
+
+.community-cards {
+  color: #ffff00;
+  margin: 15px 0;
+}
+
+.action-menu button {
+  background: #334455;
+  border: 1px solid #556677;
+  color: white;
+  padding: 5px 10px;
+  margin: 0 5px;
+}
+
+.action-menu button:hover {
+  background: #445566;
+  cursor: pointer;
+}
+
+.status-bar {
+  margin-top: 20px;
+  border-top: 1px dashed #555;
+  padding-top: 10px;
+}
+
+.title {
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0% { opacity: 0.9; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.9; }
+}
+
+/* 主菜单样式 */
+.ascii-interface .menu button {
+  display: block;
+  width: 250px;
+  margin: 8px auto;
+  padding: 8px;
+  background: #336699;
+  border: 1px solid #5588cc;
+}
+
+/* 技能树界面 */
+.skill-tree {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+}
+
+.skill {
+  border: 1px dashed #666;
+  padding: 10px;
+}
+.player.warning chips-bar { background: linear-gradient(90deg, #ff4444 30%, #334455 70%); }
+
+.skill.unlocked {
+  border-color: #0f0;
+  opacity: 0.7;
+}
+
+.skill.unlockable:hover {
+  background: #ffffff15;
+}
+
+@media (max-width: 600px) {
+  .skill-tree {
+    grid-template-columns: 1fr;
+  }
+}
