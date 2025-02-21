@@ -2,74 +2,167 @@
 <html lang="zh">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>纯文字德州扑克</title>
   <link rel="stylesheet" href="style.css">
-  <!-- 使用 defer 保证加载顺序 -->
-<script src="data.js"></script>
-<script src="ai.js"></script>       <!-- 先加载 AI 模块 -->
-<script src="core.js"></script>     <!-- 核心模块依赖 AI -->
-<script src="ui.js"></script>
+  <!-- 保证加载顺序的脚本 -->
+  <script src="data.js" defer></script>
+  <script src="ai.js" defer></script>      <!-- AI 必须优先于 Core -->
+  <script src="core.js" defer></script>    <!-- Core 依赖 AI -->
+  <script src="ui.js" defer></script>      <!-- UI 依赖 Core -->
 </head>
-<link rel="preload" href="data.js" as="script">
-<link rel="preload" href="core.js" as="script">
 <body>
   <div id="gameContainer" class="ascii-interface"></div>
+  <div id="errorContainer" style="display:none;"></div>
 
-  <!-- 增加加载完成检测 -->
-  <script>
-// 修改 index.html 中的初始化代码
-// index.html 改造后的启动代码
-window.addEventListener('load', () => {
-  // 第1阶段: 快速首屏渲染
-  const initStage1 = () => {
-    const container = document.getElementById('gameContainer');
-    container.innerHTML = '<div class="loading">基础初始化中...</div>';
-    return new Promise(resolve => setTimeout(resolve, 0));
-  };
-
-  // 第2阶段: 并行加载关键资源
-  const initStage2 = async () => {
-    const game = new GameCore();
-    const ui = new GameUI(game);
-    return { game, ui };
-  };
-
-  // 第3阶段: 分步核心初始化
-  const initStage3 = async ({ game, ui }) => {
-    // 异步负载进度通知
-    const updateProgress = (step) => {
-      ui.showLoadingIndicator(`初始化进度: ${step}`);
-    };
-
-    updateProgress('开始加载存档');
-    await new Promise(r => setTimeout(r, 0));
-    game.playerData = loadPlayerData();
-
-    updateProgress('构建牌局核心');
-    await game.asyncInitGame(3, (progress) => {
-      updateProgress(`洗牌中 ${Math.round(progress * 100)}%`);
-    });
-
-    updateProgress('启动AI模块');
-    await aiSystem.lazyInit();
-
-    updateProgress('完成准备');
-    return { game, ui };
-  };
-
-  // 执行初始化流程
-  initStage1()
-    .then(initStage2)
-    .then(initStage3)
-    .then(({ game, ui }) => {
-      ui.hideLoadingIndicator();
-      ui.renderMainMenu();
-    })
-    .catch((err) => {
-      alert(`初始化失败: ${err.message}`);
-    });
-
+window.addEventListener('error', (event) => {
+  const errorContainer = document.getElementById('errorContainer');
+  errorContainer.innerHTML = `
+    <div class="error-message">
+      <h2>游戏崩溃了！</h2>
+      <p>错误信息：${event.message}</p>
+      <p>请尝试刷新页面或联系开发者。</p>
+    </div>
+  `;
+  errorContainer.style.display = 'block';
 });
+
+<!-- 使用type="module" -->
+<script type="module">
+import { GameCore } from './core.js';
+import { AIDecisionSystem } from './ai.js';
+import { GameUI } from './ui.js';
+  // 确保使用DOMContentLoaded事件
+document.addEventListener('DOMContentLoaded', () => {
+  const scriptCheck = () => {
+    if (!window.GameCore || !window.AIDecisionSystem || !window.GameUI) {
+      setTimeout(scriptCheck, 100);
+      return;
+    }
+  
+  
+// 初始化状态监控
+const initStates = {
+  stage: 'pending',
+  progress: 0,
+  errors: []
+};
+
+// 增强版初始化流程
+window.addEventListener('load', async () => {
+  try {
+    // 阶段 1: 即时首屏渲染
+    const container = document.getElementById('gameContainer');
+    container.innerHTML = `
+      <div class="loading-screen">
+        <pre>${renderAsciiLogo()}</pre>
+        <div class="loading-progress"></div>
+      </div>
+    `;
+    
+    // 阶段 2: 并行初始化核心模块
+    const [game, ui] = await Promise.all([
+      initializeGameCore(),
+      initializeGameUI()
+    ]).catch(err => handleCriticalError(err));
+
+    // 阶段 3: 分步初始化
+    await initializeGameSystems(game, ui);
+    
+    // 完成初始化
+    document.dispatchEvent(new CustomEvent('game-ready', {
+      detail: { game, ui }
+    }));
+    
+    ui.hideLoadingIndicator();
+    ui.renderMainMenu();
+
+  } catch (error) {
+    handleCriticalError(error);
+  }
+});
+
+// 核心初始化函数
+async function initializeGameCore() {
+  updateProgress('正在初始化游戏核心...', 0.2);
+  if (!window.GameCore) {
+    throw new Error('核心模块加载失败');
+  }
+  const game = new GameCore();
+  
+  // 异步初始化检查
+  if (!game.asyncInitGame) {
+    throw new Error('游戏核心缺少异步初始化方法');
+  }
+  return game;
+}
+
+async function initializeGameUI() {
+  updateProgress('正在准备用户界面...', 0.3);
+  if (!window.GameUI) {
+    throw new Error('界面模块加载失败');
+  }
+  return new GameUI();
+}
+
+async function initializeGameSystems(game, ui) {
+  try {
+    updateProgress('正在加载玩家数据...', 0.4);
+    game.playerData = await loadPlayerData();
+    
+    updateProgress('初始化牌局核心...', 0.5);
+    await game.asyncInitGame(3, progress => {
+      updateProgress(`洗牌进度 ${Math.round(progress * 100)}%`, 0.5 + progress * 0.3);
+    });
+    
+    updateProgress('启动AI系统...', 0.85);
+    if (!window.AIDecisionSystem) {
+      throw new Error('AI 模块未正确加载');
+    }
+    await aiSystem.lazyInit();
+    
+    updateProgress('完成准备', 1);
+  } catch (error) {
+    error.message = `系统初始化失败: ${error.message}`;
+    throw error;
+  }
+}
+
+// 辅助函数
+function updateProgress(text, percentage) {
+  const progressBar = document.querySelector('.loading-progress');
+  if (progressBar) {
+    progressBar.style.width = `${Math.min(percentage * 100, 100)}%`;
+    progressBar.textContent = text;
+  }
+}
+
+function renderAsciiLogo() {
+  return `
+    ████████╗███████╗██╗░░██╗░░░░░███████╗
+    ╚══██╔══╝██╔════╝╚██╗██╔╝░░░░░██╔════╝
+    ░░░██║░░░█████╗░░░╚███╔╝░█████╗█████╗░░
+    ░░░██║░░░██╔══╝░░░██╔██╗░╚════╝██╔══╝░░
+    ░░░██║░░░███████╗██╔╝╚██╗░░░░░░███████╗
+    ░░░╚═╝░░░╚══════╝╚═╝░░╚═╝░░░░░░╚══════╝
+  `;
+}
+
+// 错误处理
+function handleCriticalError(error) {
+  console.error('致命错误:', error);
+  const errorContainer = document.getElementById('errorContainer');
+  errorContainer.innerHTML = `
+    <div class="error-message">
+      <h2>游戏崩溃了！</h2>
+      <p>错误信息：${error.message}</p>
+      <p>请尝试刷新页面或联系开发者。</p>
+      <button onclick="location.reload()">重新加载</button>
+    </div>
+  `;
+  errorContainer.style.display = 'block';
+  throw error; // 传播错误给控制台
+}
   </script>
 </body>
 </html>
